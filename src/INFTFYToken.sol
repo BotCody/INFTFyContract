@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-contract INFTFYToken is Initializable, ERC1155Upgradeable, OwnableUpgradeable {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
-    CountersUpgradeable.Counter private _tokenIds;
+contract INFTFYToken is ERC721,  Ownable {
+    using Counters for Counters.Counter;
 
+    Counters.Counter private _tokenIdCounter;
     event Mint(
         address indexed creator,
         uint256 indexed id,
@@ -22,10 +22,7 @@ contract INFTFYToken is Initializable, ERC1155Upgradeable, OwnableUpgradeable {
     mapping(uint256 => address) public creator;
     mapping(uint256 => string) private _tokenURIs;
 
-    function initialize() public initializer {
-        __ERC1155_init("");
-        __Ownable_init();
-    }
+    constructor() ERC721("INFTFYToken", "INFTFY") {}
 
     function _beforeTokenMint(
         uint256 id,
@@ -37,33 +34,30 @@ contract INFTFYToken is Initializable, ERC1155Upgradeable, OwnableUpgradeable {
         require(bytes(_tokenURI).length > 0, "tokenURI should be set");
     }
 
-    function mint(uint256 amount_, string memory tokenURI,string memory studioName, address customer) external  onlyOwner()  returns (bool){
-        _tokenIds.increment();
-        uint256 id_ = _tokenIds.current();
-        _beforeTokenMint(id_, amount_, tokenURI);
+     function mint(uint256 amount_, string memory uri,string memory studioName, address customer) external  onlyOwner()  returns (bool){
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+ 
+        _beforeTokenMint(tokenId, amount_, uri);
 
-        creator[id_] = msg.sender;
+        creator[tokenId] = msg.sender;
 
-        _setURI(id_, tokenURI);
+        _setURI(tokenId, uri);
 
-        emit Mint(msg.sender, id_, amount_, tokenURI,studioName,customer);
+        emit Mint(msg.sender, tokenId, amount_, uri,studioName,customer);
 
-        _mint(customer, id_, amount_, "");
-
+        _safeMint(customer, tokenId);
         return true;
     }
+ 
 
-     function uri(uint256 id)
-        public
-        view
-        override(ERC1155Upgradeable)
+    function tokenURI(uint256 tokenId) public  view  override(ERC721)
         returns (string memory)
     {
-        return _tokenURIs[id];
+        return _tokenURIs[tokenId];
     }
 
-    function _setURI(uint256 id, string memory _uri) internal {
+     function _setURI(uint256 id, string memory _uri) internal {
         _tokenURIs[id] = _uri;
     }
-
 }
